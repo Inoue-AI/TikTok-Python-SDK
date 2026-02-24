@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/tiktok-python-sdk
+      url: https://pypi.org/project/tiktok-python-sdk/
     steps:
       - uses: actions/checkout@v4
 
