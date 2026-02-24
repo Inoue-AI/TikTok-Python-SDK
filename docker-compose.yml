@@ -1,0 +1,40 @@
+services:
+  # ---------------------------------------------------------------------------
+  # test — run the full pytest suite inside Docker
+  # ---------------------------------------------------------------------------
+  test:
+    build:
+      context: .
+      target: dev
+    image: tiktok-python-sdk:dev
+    volumes:
+      # Mount source code so local edits are reflected without rebuilding.
+      - ./tiktok:/app/tiktok:ro
+      - ./tests:/app/tests:ro
+    command: pytest --tb=short -v
+
+  # ---------------------------------------------------------------------------
+  # lint — run ruff format check and linting inside Docker
+  # ---------------------------------------------------------------------------
+  lint:
+    build:
+      context: .
+      target: dev
+    image: tiktok-python-sdk:dev
+    volumes:
+      - ./tiktok:/app/tiktok:ro
+      - ./tests:/app/tests:ro
+    command: >
+      sh -c "ruff format --check . && ruff check ."
+
+  # ---------------------------------------------------------------------------
+  # typecheck — run mypy static analysis inside Docker
+  # ---------------------------------------------------------------------------
+  typecheck:
+    build:
+      context: .
+      target: dev
+    image: tiktok-python-sdk:dev
+    volumes:
+      - ./tiktok:/app/tiktok:ro
+    command: mypy tiktok/
