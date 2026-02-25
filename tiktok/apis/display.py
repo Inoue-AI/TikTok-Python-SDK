@@ -3,7 +3,7 @@
 Wraps the following TikTok endpoints:
 
 * ``GET  /v2/user/info/``    — user profile information
-* ``GET  /v2/video/list/``   — paginated list of the user's videos
+* ``POST /v2/video/list/``   — paginated list of the user's videos
 * ``POST /v2/video/query/``  — fetch specific videos by ID
 
 Reference: https://developers.tiktok.com/doc/display-api-overview
@@ -103,14 +103,12 @@ class DisplayAPI(BaseAPI):
             :class:`~tiktok.exceptions.TikTokAuthError`: Token lacks scope.
             :class:`~tiktok.exceptions.TikTokAPIError`: Any other API error.
         """
-        params: dict[str, Any] = {
-            "fields": _join_fields(fields),
-            "max_count": max_count,
-        }
+        params: dict[str, Any] = {"fields": _join_fields(fields)}
+        body: dict[str, Any] = {"max_count": max_count}
         if cursor is not None:
-            params["cursor"] = cursor
+            body["cursor"] = cursor
 
-        payload = await self._session.get(f"{_BASE}/v2/video/list/", params=params)
+        payload = await self._session.post(f"{_BASE}/v2/video/list/", json=body, params=params)
         return VideoListData.model_validate(payload["data"])
 
     async def iter_videos(

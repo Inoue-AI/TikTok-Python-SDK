@@ -200,6 +200,15 @@ class TikTokSession:
         ``error.code`` is ``"ok"`` the call succeeded; any other value is
         treated as an error regardless of the HTTP status code.
         """
+        raw_body = await response.read()
+        if not raw_body or not raw_body.strip():
+            raise build_api_error(
+                code="empty_response",
+                message=f"TikTok returned an empty response body (HTTP {response.status}, url={response.url})",
+                log_id="",
+                http_status=response.status,
+            )
+
         payload: dict[str, Any] = await response.json(content_type=None)
         error: dict[str, Any] = payload.get("error", {})
         code: str = error.get("code", "ok")
