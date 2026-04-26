@@ -1,4 +1,45 @@
-# TikTok Python SDK
+# Inoue-AI TikTok SDK
+
+Multi-language SDK for the TikTok Open API. This repository ships both a
+Python client (under `tiktok/`) and a Go client (under `go/`).
+
+> **Note:** This repository was renamed from `Inoue-AI/TikTok-Python-SDK` to
+> `Inoue-AI/Inoue-AI-TikTok-SDK`. GitHub auto-redirects the old URL, so
+> existing `pip install ... @ git+https://github.com/Inoue-AI/TikTok-Python-SDK.git`
+> commands continue to work. The local clone keeps the legacy directory name.
+
+## Python
+
+The Python source remains under [`tiktok/`](./tiktok). Install:
+
+```bash
+pip install "git+https://github.com/Inoue-AI/Inoue-AI-TikTok-SDK.git"
+```
+
+See the original Python documentation below.
+
+## Go
+
+The Go SDK lives under [`go/`](./go). It exposes a focused subset matching
+the calls the Inoue AI Go backend makes (account info, video list/query,
+account analytics aggregates, OAuth token refresh). Every method is
+context-aware and the underlying `*http.Client` is bounded.
+
+```bash
+go get github.com/Inoue-AI/Inoue-AI-TikTok-SDK/go@latest
+```
+
+```go
+client := tiktok.New(tiktok.ClientOptions{AccessToken: "..."})
+defer client.Close()
+user, err := client.GetUser(ctx, []string{"open_id", "display_name"})
+```
+
+See [`go/README.md`](./go/README.md) for the full Go API.
+
+---
+
+## Original Python SDK
 
 An async Python SDK for TikTok's **Content Posting API**, **Display API**, and **Data Portability API**.
 
