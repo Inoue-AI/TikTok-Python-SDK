@@ -1,5 +1,6 @@
 // Package tiktok provides a typed, context-aware Go client for the TikTok
-// Open API (Display, Content Posting, OAuth/refresh, and Account Analytics).
+// Open API (Display, Content Posting, Data Portability, OAuth/refresh, and
+// Account Analytics).
 //
 // The client mirrors the Python SDK shape so that backend services can swap
 // implementations without behavioural drift. Every public method takes

@@ -61,9 +61,15 @@ func main() {
 |---|---|---|
 | `GetUser(ctx, fields)` | `GET /v2/user/info/` | `user.info.basic` |
 | `ListVideos(ctx, params)` | `POST /v2/video/list/` | `video.list` |
+| `IterVideos(ctx, params)` | `POST /v2/video/list/` (auto-paginated) | `video.list` |
 | `QueryVideos(ctx, ids, fields)` | `POST /v2/video/query/` | `video.list` |
 | `GetVideo(ctx, id, fields)` | `POST /v2/video/query/` | `video.list` |
 | `GetAccountAnalytics(ctx, params)` | `user/info` + `video/list` aggregate | `user.info.stats` + `video.list` |
+
+`IterVideos` is the Go equivalent of the Python SDK's `iter_videos` async
+generator. Go has no async generators, so it follows the SDK's established
+cursor-walking convention and returns the accumulated slice; pass
+`IterVideosParams.Limit` to bound the total and the upstream calls.
 
 ### Content Posting (user-token)
 
@@ -82,6 +88,20 @@ func main() {
 
 `WaitForPostCompletion` polls with a `time.Ticker` and honours both the supplied
 `timeout` and `ctx` cancellation — it never busy-waits and never leaks the ticker.
+
+### Data Portability (user-token)
+
+Available only to users in the European Economic Area (EEA) or the United
+Kingdom (UK). Calls from other regions are rejected upstream regardless of token
+validity, so live verification is region/credentials-gated; the request
+construction and response parsing are unit-tested with `httptest`.
+
+| Go method | TikTok endpoint | Notes |
+|---|---|---|
+| `AddDataRequest(ctx, params)` | `POST /v2/user/data/add/` | Always sends `fields=request_id` |
+| `CheckDataRequestStatus(ctx, id, fields)` | `POST /v2/user/data/check/` | `nil` fields requests all status fields |
+| `CancelDataRequest(ctx, id)` | `POST /v2/user/data/cancel/` | `request_id` carried as a query param |
+| `DownloadData(ctx, id)` | `POST /v2/user/data/download/` | Returns the raw zip archive bytes |
 
 ## Operating principles
 

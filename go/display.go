@@ -127,6 +127,68 @@ func (c *Client) ListVideos(ctx context.Context, p ListVideosParams) (*VideoList
 	return out, nil
 }
 
+// IterVideosParams configures IterVideos.
+type IterVideosParams struct {
+	// Fields is required: the video fields to request on each page.
+	Fields []string
+	// MaxCount is the per-page size (1-20). Defaults to 20 when non-positive.
+	MaxCount int
+	// Limit caps the total number of videos returned across all pages. When
+	// non-positive, every available video is returned. It bounds memory and
+	// upstream calls so the iteration can never run unbounded.
+	Limit int
+}
+
+// IterVideos returns every video for the authenticated user, automatically
+// following pagination cursors until all videos have been collected (or the
+// optional Limit is reached). It is the Go equivalent of the Python SDK's
+// iter_videos async generator; because Go has no async generators, the SDK
+// follows the established cursor-walking convention (see GetAccountAnalytics)
+// and returns the accumulated slice.
+//
+// Each page request honours ctx; cancellation stops the walk and surfaces the
+// context error.
+//
+// Scope: video.list.
+func (c *Client) IterVideos(ctx context.Context, p IterVideosParams) ([]Video, error) {
+	if len(p.Fields) == 0 {
+		return nil, errors.New("tiktok: IterVideos requires at least one field")
+	}
+	maxCount := p.MaxCount
+	if maxCount <= 0 {
+		maxCount = 20
+	}
+
+	var (
+		all    []Video
+		cursor *int64
+	)
+	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		page, err := c.ListVideos(ctx, ListVideosParams{
+			Fields:   p.Fields,
+			Cursor:   cursor,
+			MaxCount: maxCount,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for i := range page.Videos {
+			all = append(all, page.Videos[i])
+			if p.Limit > 0 && len(all) >= p.Limit {
+				return all, nil
+			}
+		}
+		if !page.HasMore {
+			return all, nil
+		}
+		next := page.Cursor
+		cursor = &next
+	}
+}
+
 // GetVideo fetches metadata for a single video by ID. Convenience wrapper
 // around /v2/video/query/ for the common single-video case.
 //

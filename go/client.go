@@ -298,3 +298,77 @@ func (c *Client) doForm(ctx context.Context, fullURL string, form url.Values, ou
 	}
 	return nil
 }
+
+// doRaw executes an authenticated request whose successful response is a raw
+// binary stream rather than a JSON envelope. It is used by the Data Portability
+// download endpoint, which returns a zip archive on success but still reports
+// failures using the standard JSON error envelope.
+//
+// The full response body is read into memory because TikTok returns the
+// archive as a single bounded payload; callers receive the complete byte slice.
+func (c *Client) doRaw(ctx context.Context, method, fullURL string, body any, query url.Values) ([]byte, error) {
+	if c.accessToken == "" {
+		return nil, errors.New("tiktok: access token is required for this endpoint")
+	}
+
+	var bodyReader io.Reader
+	if body != nil {
+		buf, err := json.Marshal(body)
+		if err != nil {
+			return nil, fmt.Errorf("tiktok: marshal request body: %w", err)
+		}
+		bodyReader = bytes.NewReader(buf)
+	}
+
+	if len(query) > 0 {
+		if strings.Contains(fullURL, "?") {
+			fullURL += "&" + query.Encode()
+		} else {
+			fullURL += "?" + query.Encode()
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, fullURL, bodyReader)
+	if err != nil {
+		return nil, fmt.Errorf("tiktok: build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	req.Header.Set("User-Agent", c.userAgent)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("tiktok: %s %s: %w", method, fullURL, err)
+	}
+	defer resp.Body.Close()
+
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("tiktok: read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		// The error is returned as the standard JSON envelope even for the
+		// streaming endpoint; fall back to a generic error when it is not JSON.
+		var env envelope
+		if jsonErr := json.Unmarshal(raw, &env); jsonErr == nil && env.Error.Code != "" {
+			return nil, &Error{
+				StatusCode: resp.StatusCode,
+				Code:       env.Error.Code,
+				Message:    env.Error.Message,
+				LogID:      env.Error.LogID,
+				Body:       raw,
+			}
+		}
+		return nil, &Error{
+			StatusCode: resp.StatusCode,
+			Code:       "download_failed",
+			Message:    fmt.Sprintf("download request failed — HTTP %d", resp.StatusCode),
+			Body:       raw,
+		}
+	}
+
+	return raw, nil
+}
