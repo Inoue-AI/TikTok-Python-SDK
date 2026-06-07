@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import pytest
-from aioresponses import aioresponses
+from aioresponses import CallbackResult, aioresponses
 
 from tiktok.client import TikTokClient
-from tiktok.exceptions import TikTokAPIError, TikTokAuthError
+from tiktok.exceptions import TikTokAPIError, TikTokAuthError, TikTokUploadError
 from tiktok.models.content_posting import (
     CreatorInfo,
     FailReason,
@@ -16,6 +17,7 @@ from tiktok.models.content_posting import (
     PostStatus,
     PostStatusData,
     PrivacyLevel,
+    VideoContentType,
     VideoInitData,
     VideoSource,
 )
@@ -290,3 +292,101 @@ async def test_upload_video_chunk(client: TikTokClient) -> None:
             total_bytes=1024,
         )
     # No exception means success.
+
+
+@pytest.mark.asyncio
+async def test_upload_video_chunk_failure_raises(client: TikTokClient) -> None:
+    upload_url = "https://open-upload.tiktokapis.com/upload/?upload_id=x&upload_token=y"
+    with aioresponses() as mock:
+        mock.put(_URL_UPLOAD, status=500)
+        with pytest.raises(TikTokUploadError) as exc_info:
+            await client.content_posting.upload_video_chunk(
+                upload_url,
+                data=b"A" * 16,
+                start_byte=0,
+                total_bytes=16,
+            )
+    assert exc_info.value.http_status == 500
+
+
+# ---------------------------------------------------------------------------
+# upload_video_file (auto-chunking from disk)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_upload_video_file_chunks(client: TikTokClient, tmp_path: Path) -> None:
+    # 25-byte file with a 10-byte chunk size => 3 chunks (10 + 10 + 5).
+    file_path = tmp_path / "clip.mp4"
+    file_path.write_bytes(b"X" * 25)
+    upload_url = "https://open-upload.tiktokapis.com/upload/?upload_id=x&upload_token=y"
+
+    seen_ranges: list[str] = []
+
+    def _record(url: object, **kwargs: object) -> CallbackResult:
+        # aioresponses passes headers as a case-insensitive multidict.
+        headers = kwargs.get("headers")
+        content_range = headers.get("Content-Range") if headers is not None else None  # type: ignore[attr-defined]
+        seen_ranges.append(str(content_range))
+        return CallbackResult(status=200)
+
+    with aioresponses() as mock:
+        # One registered callback per expected chunk.
+        for _ in range(3):
+            mock.put(_URL_UPLOAD, callback=_record)
+        await client.content_posting.upload_video_file(
+            upload_url,
+            str(file_path),
+            content_type=VideoContentType.MP4,
+            chunk_size=10,
+        )
+
+    assert seen_ranges == [
+        "bytes 0-9/25",
+        "bytes 10-19/25",
+        "bytes 20-24/25",
+    ]
+
+
+# ---------------------------------------------------------------------------
+# wait_for_post_completion (polling)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_wait_for_post_completion_terminal(client: TikTokClient) -> None:
+    processing = {
+        "data": {"status": "PROCESSING_UPLOAD"},
+        "error": {"code": "ok", "message": "", "log_id": "a"},
+    }
+    complete = {
+        "data": {"status": "PUBLISH_COMPLETE", "publicaly_available_post_id": [7000]},
+        "error": {"code": "ok", "message": "", "log_id": "b"},
+    }
+    with aioresponses() as mock:
+        mock.post(_URL_STATUS, payload=processing)
+        mock.post(_URL_STATUS, payload=complete)
+        result = await client.content_posting.wait_for_post_completion(
+            "pub_x",
+            poll_interval=0.0,
+            timeout=5.0,
+        )
+    assert result.status == PostStatus.PUBLISH_COMPLETE
+    assert 7000 in result.publicaly_available_post_id
+
+
+@pytest.mark.asyncio
+async def test_wait_for_post_completion_timeout(client: TikTokClient) -> None:
+    processing = {
+        "data": {"status": "PROCESSING_UPLOAD"},
+        "error": {"code": "ok", "message": "", "log_id": "a"},
+    }
+    with aioresponses() as mock:
+        # Always processing — repeat the same response for every poll.
+        mock.post(_URL_STATUS, payload=processing, repeat=True)
+        with pytest.raises(TimeoutError):
+            await client.content_posting.wait_for_post_completion(
+                "pub_y",
+                poll_interval=0.01,
+                timeout=0.03,
+            )

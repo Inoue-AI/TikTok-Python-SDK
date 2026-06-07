@@ -206,6 +206,43 @@ func (c *Client) doJSON(ctx context.Context, method, fullURL string, body any, q
 	return env.Data, nil
 }
 
+// putChunk uploads a single binary chunk via PUT to a pre-signed upload URL.
+// The upload endpoints return no JSON envelope: success is any 2xx status, and
+// the request carries the user's Authorization header plus a Content-Range.
+func (c *Client) putChunk(ctx context.Context, uploadURL string, data []byte, contentType, contentRange string) error {
+	if c.accessToken == "" {
+		return errors.New("tiktok: access token is required for chunk uploads")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("tiktok: build chunk request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	req.Header.Set("User-Agent", c.userAgent)
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Content-Range", contentRange)
+	req.ContentLength = int64(len(data))
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("tiktok: PUT %s: %w", uploadURL, err)
+	}
+	defer resp.Body.Close()
+	// Drain the body so the connection can be reused, then discard it.
+	_, _ = io.Copy(io.Discard, resp.Body)
+
+	switch resp.StatusCode {
+	case http.StatusOK, http.StatusCreated, http.StatusNoContent, http.StatusPartialContent:
+		return nil
+	default:
+		return &Error{
+			StatusCode: resp.StatusCode,
+			Code:       "upload_failed",
+			Message:    fmt.Sprintf("chunk upload failed — HTTP %d", resp.StatusCode),
+		}
+	}
+}
+
 // doForm executes an unauthenticated POST that submits an
 // application/x-www-form-urlencoded body. Used by the OAuth refresh endpoint,
 // which is application-credential rather than user-token authenticated.

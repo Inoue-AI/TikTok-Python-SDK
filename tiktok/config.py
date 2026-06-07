@@ -2,6 +2,10 @@
 
 TIKTOK_API_BASE_URL = "https://open.tiktokapis.com"
 
+# Base URL for the user-facing OAuth consent screen.  Note this is the
+# www.tiktok.com host, distinct from the open.tiktokapis.com API host.
+TIKTOK_AUTHORIZE_URL = "https://www.tiktok.com/v2/auth/authorize/"
+
 # Default network timeout in seconds for API requests.
 DEFAULT_TIMEOUT: float = 30.0
 

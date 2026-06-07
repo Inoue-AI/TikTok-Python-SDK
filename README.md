@@ -52,6 +52,8 @@ An async Python SDK for TikTok's **Content Posting API**, **Display API**, and *
 
 - **Fully async** — built on `aiohttp` with an `asyncio`-native interface
 - **Typed responses** — every API response is a frozen Pydantic v2 model
+- **OAuth 2.0 included** — `TikTokOAuth` builds the consent URL and runs the
+  authorization-code, refresh (with token rotation), and revoke grants
 - **Three API namespaces** — `client.content_posting`, `client.display`, `client.data_portability`
 - **Convenience helpers** — upload files from disk, poll for post completion, paginate videos automatically
 - **Clean exception hierarchy** — catch broad or specific errors as needed
@@ -261,9 +263,30 @@ docker compose run typecheck
 
 ## Authentication
 
-This SDK does **not** implement the TikTok OAuth 2.0 flow.  Obtain an access
-token externally (e.g. via your web server or the TikTok Developer Portal) and
-pass it to `TikTokClient`.  Token refresh must also be handled externally.
+The SDK ships a standalone async OAuth helper, `TikTokOAuth`, that handles the
+full user-token lifecycle.  It authenticates with the *application*
+`client_key` / `client_secret` (not a user token), so it is used precisely to
+*obtain* the first access token:
+
+```python
+from tiktok import TikTokOAuth
+
+async with TikTokOAuth(client_key="...", client_secret="...") as oauth:
+    # 1. Redirect the user to consent.
+    url = oauth.build_authorization_url(
+        redirect_uri="https://app.example.com/callback",
+        scopes=["user.info.basic", "video.publish"],
+        state="csrf-token",
+    )
+    # 2. Exchange the returned code for tokens.
+    tokens = await oauth.exchange_code(code="...", redirect_uri="https://app.example.com/callback")
+    # 3. Later, refresh (TikTok rotates the refresh token on every refresh).
+    tokens = await oauth.refresh_access_token(tokens.refresh_token)
+    # 4. Revoke when the user disconnects.
+    await oauth.revoke_access_token(tokens.access_token)
+```
+
+Pass the resulting `tokens.access_token` to `TikTokClient` for user-scoped calls.
 
 Required OAuth scopes per feature:
 

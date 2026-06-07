@@ -11,7 +11,7 @@ Quick-start::
         )
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from tiktok.client import TikTokClient
 from tiktok.exceptions import (
@@ -39,6 +39,7 @@ from tiktok.models import (
     StatusField,
     TikTokBaseModel,
     TikTokError,
+    TokenResponse,
     User,
     UserField,
     Video,
@@ -49,6 +50,7 @@ from tiktok.models import (
     VideoQueryData,
     VideoSource,
 )
+from tiktok.oauth import TikTokOAuth
 
 __all__ = [
     "AddDataRequestData",
@@ -70,10 +72,12 @@ __all__ = [
     "TikTokConfigError",
     "TikTokError",
     "TikTokNotFoundError",
+    "TikTokOAuth",
     "TikTokRateLimitError",
     "TikTokSDKError",
     "TikTokServerError",
     "TikTokUploadError",
+    "TokenResponse",
     "User",
     "UserField",
     "Video",

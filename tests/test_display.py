@@ -149,7 +149,7 @@ async def test_list_videos_first_page(client: TikTokClient) -> None:
     }
 
     with aioresponses() as mock:
-        mock.get(_URL_VIDEO_LIST, payload=response_payload)
+        mock.post(_URL_VIDEO_LIST, payload=response_payload)
         result = await client.display.list_videos(
             fields=[VideoField.ID, VideoField.TITLE, VideoField.DURATION]
         )
@@ -174,7 +174,7 @@ async def test_list_videos_last_page(client: TikTokClient) -> None:
     }
 
     with aioresponses() as mock:
-        mock.get(_URL_VIDEO_LIST, payload=response_payload)
+        mock.post(_URL_VIDEO_LIST, payload=response_payload)
         result = await client.display.list_videos(
             fields=[VideoField.ID, VideoField.TITLE, VideoField.DURATION],
             cursor=1700000000000,
@@ -214,7 +214,7 @@ async def test_list_videos_all_fields(client: TikTokClient) -> None:
     }
 
     with aioresponses() as mock:
-        mock.get(_URL_VIDEO_LIST, payload=response_payload)
+        mock.post(_URL_VIDEO_LIST, payload=response_payload)
         result = await client.display.list_videos(fields=list(VideoField))
 
     video = result.videos[0]
@@ -245,8 +245,8 @@ async def test_iter_videos_pagination(client: TikTokClient) -> None:
     }
 
     with aioresponses() as mock:
-        mock.get(_URL_VIDEO_LIST, payload=first_page)
-        mock.get(_URL_VIDEO_LIST, payload=second_page)
+        mock.post(_URL_VIDEO_LIST, payload=first_page)
+        mock.post(_URL_VIDEO_LIST, payload=second_page)
 
         collected: list[Video] = []
         async for video in client.display.iter_videos(fields=[VideoField.ID]):

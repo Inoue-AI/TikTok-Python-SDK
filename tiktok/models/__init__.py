@@ -28,6 +28,7 @@ from tiktok.models.display import (
     VideoListData,
     VideoQueryData,
 )
+from tiktok.models.oauth import TokenResponse
 
 __all__ = [
     "AddDataRequestData",
@@ -44,6 +45,7 @@ __all__ = [
     "StatusField",
     "TikTokBaseModel",
     "TikTokError",
+    "TokenResponse",
     "User",
     "UserField",
     "Video",

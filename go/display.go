@@ -13,20 +13,20 @@ import (
 // User mirrors the subset of TikTok user fields exposed via /v2/user/info/.
 // Fields are populated only if they were requested via the `fields` argument.
 type User struct {
-	OpenID         string  `json:"open_id,omitempty"`
-	UnionID        string  `json:"union_id,omitempty"`
-	AvatarURL      string  `json:"avatar_url,omitempty"`
-	AvatarURL100   string  `json:"avatar_url_100,omitempty"`
-	AvatarLargeURL string  `json:"avatar_large_url,omitempty"`
-	DisplayName    string  `json:"display_name,omitempty"`
-	BioDescription string  `json:"bio_description,omitempty"`
+	OpenID          string `json:"open_id,omitempty"`
+	UnionID         string `json:"union_id,omitempty"`
+	AvatarURL       string `json:"avatar_url,omitempty"`
+	AvatarURL100    string `json:"avatar_url_100,omitempty"`
+	AvatarLargeURL  string `json:"avatar_large_url,omitempty"`
+	DisplayName     string `json:"display_name,omitempty"`
+	BioDescription  string `json:"bio_description,omitempty"`
 	ProfileDeepLink string `json:"profile_deep_link,omitempty"`
-	IsVerified     bool    `json:"is_verified,omitempty"`
-	Username       string  `json:"username,omitempty"`
-	FollowerCount  int64   `json:"follower_count,omitempty"`
-	FollowingCount int64   `json:"following_count,omitempty"`
-	LikesCount     int64   `json:"likes_count,omitempty"`
-	VideoCount     int64   `json:"video_count,omitempty"`
+	IsVerified      bool   `json:"is_verified,omitempty"`
+	Username        string `json:"username,omitempty"`
+	FollowerCount   int64  `json:"follower_count,omitempty"`
+	FollowingCount  int64  `json:"following_count,omitempty"`
+	LikesCount      int64  `json:"likes_count,omitempty"`
+	VideoCount      int64  `json:"video_count,omitempty"`
 }
 
 // Video mirrors the TikTok video resource fields exposed via /v2/video/list/
